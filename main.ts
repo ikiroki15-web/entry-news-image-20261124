@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -44,7 +44,17 @@ function run(): void {
   const source = locateImage();
   const dir = outputDir();
   mkdirSync(dir, { recursive: true });
-  copyFileSync(source, join(dir, IMAGE_NAME));
+  const target = join(dir, IMAGE_NAME);
+  copyFileSync(source, target);
+  // Guard against a partial copy: the output must hold exactly the
+  // source's bytes, so compare sizes after copying.
+  const sourceBytes = statSync(source).size;
+  const targetBytes = statSync(target).size;
+  if (sourceBytes !== targetBytes) {
+    throw new Error(
+      `copied ${targetBytes} bytes, expected ${sourceBytes} from ${IMAGE_NAME}`,
+    );
+  }
 }
 
 run();
